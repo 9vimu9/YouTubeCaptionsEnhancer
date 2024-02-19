@@ -1,11 +1,10 @@
 const CAPTIONS_URL = 'http://127.0.0.1:8000/captions/'
+const INTERVAL = 100;
+
 let videoId = getVideoId()
 let duration = 0;
 let captions = [];
 let video = document.getElementsByClassName('video-stream')[0];
-let counter = 0
-let intervalId = undefined;
-const interval = 1000;
 
 getCaptions(videoId);
 
@@ -17,9 +16,7 @@ video.onplay = async function () {
         videoId = getVideoId()
         console.log("video ID : " + videoId)
         await getCaptions(videoId);
-        return;
     }
-    showCaptions();
 }
 
 function findCaptions(arr, currentTime) {
@@ -45,18 +42,25 @@ function showCaptions() {
     if (!captions.length) {
         return;
     }
-    counter = video.currentTime * 1000
-    intervalId = setInterval(() => {
-        counter += interval;
-        if (counter >= duration) {
-            stopCaptioning()
-        }
-        let currentTime = video.currentTime * 1000;
-        let caption = findCaptions(captions, currentTime);
-        if (caption !== undefined) {
-            console.log(caption)
-        }
-    }, interval)
+    console.log("Sdsds")
+    if (video.paused) {
+        stopCaptioning();
+        return;
+    }
+    const currentTime = video.currentTime * 1000;
+    if (currentTime >= duration) {
+        return;
+    }
+    let caption = findCaptions(captions, currentTime);
+    console.log(caption)
+    let captionTime = INTERVAL;
+    if (caption !== undefined) {
+        const nextCaptionIndex = caption['next_caption_index'];
+        captionTime = Math.floor(captions[nextCaptionIndex]['start'] - video.currentTime * 1000);
+    }
+    setTimeout(function () {
+        showCaptions();
+    }, captionTime)
 }
 
 
@@ -90,12 +94,18 @@ async function getCaptions(videoId) {
 }
 
 function stopCaptioning() {
-    if (intervalId === undefined) {
-        return;
-    }
-
-    duration = 0;
-    captions = [];
-    clearInterval(intervalId)
 }
 
+function mutateCaption(caption) {
+    let captionTiles = document.querySelectorAll(
+        '.ytp-caption-segment'
+    )
+    const lines = caption.split('\\n');
+    if (lines.length !== captionTiles.length) {
+        return;
+    }
+    for (const i in lines) {
+        console.log(captionTiles[i].innerText)
+        console.log(lines[i]);
+    }
+}
