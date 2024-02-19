@@ -47,7 +47,6 @@ function showCaptions() {
     if (captions === undefined || !captions.length) {
         return;
     }
-    console.log("Sdsds")
     if (video.paused) {
         return;
     }
@@ -55,8 +54,12 @@ function showCaptions() {
     if (currentTime >= duration) {
         return;
     }
-    let caption = findCaptions(captions, currentTime);
-    console.log(caption)
+    let caption;
+    if (nextCaptionIndex) {
+        caption = captions[nextCaptionIndex];
+    } else {
+        caption = findCaptions(captions, currentTime);
+    }
     let captionTime = INTERVAL;
     if (caption !== undefined) {
         nextCaptionIndex = caption['next_caption_index'];
