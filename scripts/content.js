@@ -5,17 +5,22 @@ let videoId = getVideoId()
 let duration = 0;
 let captions = [];
 let video = document.getElementsByClassName('video-stream')[0];
+let nextCaptionIndex = undefined;
+let timeoutId = undefined;
 
 getCaptions(videoId);
 
-video.onpause = stopCaptioning
 
 video.onplay = async function () {
     console.log("video played")
+    nextCaptionIndex = undefined;
+    clearTimeout(timeoutId)
     if (getVideoId() !== videoId) {
         videoId = getVideoId()
         console.log("video ID : " + videoId)
         await getCaptions(videoId);
+    } else {
+        showCaptions();
     }
 }
 
@@ -39,12 +44,11 @@ function findCaptions(arr, currentTime) {
 }
 
 function showCaptions() {
-    if (!captions.length) {
+    if (captions === undefined || !captions.length) {
         return;
     }
     console.log("Sdsds")
     if (video.paused) {
-        stopCaptioning();
         return;
     }
     const currentTime = video.currentTime * 1000;
@@ -55,10 +59,16 @@ function showCaptions() {
     console.log(caption)
     let captionTime = INTERVAL;
     if (caption !== undefined) {
-        const nextCaptionIndex = caption['next_caption_index'];
-        captionTime = Math.floor(captions[nextCaptionIndex]['start'] - video.currentTime * 1000);
+        nextCaptionIndex = caption['next_caption_index'];
+        let nextStartTime;
+        if (nextCaptionIndex === null) {
+            nextStartTime = caption['end']
+        } else {
+            nextStartTime = captions[nextCaptionIndex]['start'];
+        }
+        captionTime = Math.floor(nextStartTime - video.currentTime * 1000);
     }
-    setTimeout(function () {
+    timeoutId = setTimeout(function () {
         showCaptions();
     }, captionTime)
 }
@@ -74,7 +84,6 @@ async function getCaptions(videoId) {
             if (!response.ok) {
                 stopCaptioning();
                 return response.text().then(text => {
-                    console.error('Error:', text);
                     throw new Error(text)
                 })
             }
@@ -87,9 +96,9 @@ async function getCaptions(videoId) {
             showCaptions()
         })
         .catch(error => {
-            stopCaptioning();
+            duration = undefined;
+            captions = undefined;
             console.error('Error:', error);
-            throw new Error(error)
         });
 }
 
