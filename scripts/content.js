@@ -1,5 +1,5 @@
 const CAPTIONS_URL = 'http://127.0.0.1:8000/captions/'
-const INTERVAL = 100;
+const INTERVAL = 5;
 
 let videoId = getVideoId()
 let duration = 0;
@@ -7,6 +7,7 @@ let captions = [];
 let video = document.getElementsByClassName('video-stream')[0];
 let nextCaptionIndex = undefined;
 let timeoutId = undefined;
+let caption = undefined;
 
 getCaptions(videoId);
 
@@ -17,6 +18,7 @@ video.onplay = async function () {
     clearTimeout(timeoutId)
     if (getVideoId() !== videoId) {
         videoId = getVideoId()
+        video = document.getElementsByClassName('video-stream')[0];
         console.log("video ID : " + videoId)
         await getCaptions(videoId);
     } else {
@@ -54,14 +56,20 @@ function showCaptions() {
     if (currentTime >= duration) {
         return;
     }
-    let caption;
-    if (nextCaptionIndex) {
-        caption = captions[nextCaptionIndex];
-    } else {
-        caption = findCaptions(captions, currentTime);
+    if (caption === undefined) {
+        if (nextCaptionIndex) {
+            caption = captions[nextCaptionIndex];
+        } else {
+            caption = findCaptions(captions, currentTime);
+        }
     }
+
     let captionTime = INTERVAL;
-    if (caption !== undefined) {
+    let captionTiles = document.querySelectorAll(
+        '.ytp-caption-segment'
+    );
+    if (caption !== undefined && captionTiles.length) {
+        mutateCaption(caption['text'], captionTiles)
         nextCaptionIndex = caption['next_caption_index'];
         let nextStartTime;
         if (nextCaptionIndex === null) {
@@ -70,6 +78,7 @@ function showCaptions() {
             nextStartTime = captions[nextCaptionIndex]['start'];
         }
         captionTime = Math.floor(nextStartTime - video.currentTime * 1000);
+        caption = undefined;
     }
     timeoutId = setTimeout(function () {
         showCaptions();
@@ -85,7 +94,6 @@ async function getCaptions(videoId) {
     await fetch(CAPTIONS_URL + videoId)
         .then(response => {
             if (!response.ok) {
-                stopCaptioning();
                 return response.text().then(text => {
                     throw new Error(text)
                 })
@@ -105,19 +113,31 @@ async function getCaptions(videoId) {
         });
 }
 
-function stopCaptioning() {
+function mutateCaption(caption, captionTiles) {
+    const lines = caption.split('\n');
+    const lineLengths = lines.map(function (line) {
+        return line.length;
+    })
+    const innerTextLengths = Array.from(captionTiles).map(function (captionTile) {
+        return captionTile.innerText.length;
+    });
+
+    const innerTextMaxChars = Math.max(...innerTextLengths);
+    const lineMaxChars = Math.max(...lineLengths);
+
+    let subtitlePanel = document.querySelector(
+        '.caption-window.ytp-caption-window-bottom'
+    );
+    subtitlePanel.style.width = calculateWidth(
+        innerTextMaxChars,
+        lineMaxChars,
+        parseInt(subtitlePanel.style.width, 10)
+    ) + 'px';
+    for (const i in lines) {
+        captionTiles[i].innerText = lines[i];
+    }
 }
 
-function mutateCaption(caption) {
-    let captionTiles = document.querySelectorAll(
-        '.ytp-caption-segment'
-    )
-    const lines = caption.split('\\n');
-    if (lines.length !== captionTiles.length) {
-        return;
-    }
-    for (const i in lines) {
-        console.log(captionTiles[i].innerText)
-        console.log(lines[i]);
-    }
+function calculateWidth(innerTextLength, newTextLength, currentWidth) {
+    return (currentWidth / innerTextLength) * newTextLength + 10
 }
