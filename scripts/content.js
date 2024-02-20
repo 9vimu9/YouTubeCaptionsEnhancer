@@ -1,5 +1,5 @@
 const CAPTIONS_URL = 'http://127.0.0.1:8000/captions/'
-const INTERVAL = 5;
+const INTERVAL = 50;
 
 let videoId = getVideoId()
 let duration = 0;
@@ -69,6 +69,7 @@ function showCaptions() {
         '.ytp-caption-segment'
     );
     if (caption !== undefined && captionTiles.length) {
+        // console.log(caption)
         mutateCaption(caption['text'], captionTiles)
         nextCaptionIndex = caption['next_caption_index'];
         let nextStartTime;
@@ -115,6 +116,9 @@ async function getCaptions(videoId) {
 
 function mutateCaption(caption, captionTiles) {
     const lines = caption.split('\n');
+    if(lines.length!==captionTiles.length){
+        return;
+    }
     const lineLengths = lines.map(function (line) {
         return line.length;
     })
@@ -134,10 +138,10 @@ function mutateCaption(caption, captionTiles) {
         parseInt(subtitlePanel.style.width, 10)
     ) + 'px';
     for (const i in lines) {
-        captionTiles[i].innerText = lines[i];
+        captionTiles[i].innerHTML = lines[i];
     }
 }
 
 function calculateWidth(innerTextLength, newTextLength, currentWidth) {
-    return (currentWidth / innerTextLength) * newTextLength + 10
+    return (currentWidth / innerTextLength) * newTextLength
 }
